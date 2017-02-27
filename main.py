@@ -5,6 +5,8 @@ import time
 import multiprocessing
 from LinksToCrawl import *
 from cLottoDraw import cLottoDrawOld
+from cLottoDraw import cLottoDrawMid
+from cLottoDraw import cLottoDrawModern
 from multiprocessing import Process, Manager
 from bs4 import BeautifulSoup
 
@@ -92,7 +94,9 @@ def getOldDraws(CPU):
                     allOldLottoDraws.append(newLottoDrawOld)
 
         except:
-            print()
+            FileWrite = open(str(CPU) + " - #LottoDNF.txt", "a")
+            FileWrite.write(OldLottoDrawLink + "\n")
+            FileWrite.close()
 
     #allLottoDrawsOld = sorted(allOldLottoDraws, key=lambda cLottoDraw: int(cLottoDraw.getYear()))
     #allLottoDrawsOld = sorted(allOldLottoDraws, key=lambda cLottoDraw: int(cLottoDraw.getMonth()), reverse=True)
@@ -100,18 +104,60 @@ def getOldDraws(CPU):
 def getMidDraws(CPU):
     for i, MidLottoDrawLink in enumerate(MidLottoDrawLinks):
         try:
-            print()
+            MidLottoDrawLinkSoup = MakeSoup(1, MidLottoDrawLink)
+            Draws = MidLottoDrawLinkSoup.find("div", {"id": "lottobox"})
+            Draws = Draws.findAll("p")
+
+            for j, Draw in enumerate(Draws):
+                if "Lottozahlen" in str(Draw.text):
+                    thisDate = Draw.text
+                    thisWinDraw = Draw.findNext().text
+                    thisBonusNumber = Draw.findNext().findNext().text
+                    thisSuperNumber = Draw.findNext().findNext().findNext().findNext().text
+                    thisPullDraw = Draw.findNext().findNext().findNext().findNext().findNext().findNext().text
+
+                    newLottoDrawMid = cLottoDrawMid.cLottoDrawMid(Draw)
+                    newLottoDrawMid.findDate(thisDate)
+                    newLottoDrawMid.findWeekDay(thisDate)
+                    newLottoDrawMid.findWinningNumbers(thisWinDraw)
+                    newLottoDrawMid.findPullDraw(thisPullDraw)
+                    newLottoDrawMid.findBonusNumber(thisBonusNumber)
+                    newLottoDrawMid.findSuperNumber(thisSuperNumber)
+
+                    allMidLottoDraws.append(newLottoDrawMid)
 
         except:
-            print()
+            FileWrite = open(str(CPU) + " - #LottoDNF.txt", "a")
+            FileWrite.write(MidLottoDrawLink + "\n")
+            FileWrite.close()
 
 def getModDraws(CPU):
     for i, ModLottoDrawLink in enumerate(ModernLottoDrawLinks):
         try:
-            print()
+            ModLottoDrawLinkSoup = MakeSoup(1, ModLottoDrawLink)
+            Draws = ModLottoDrawLinkSoup.findAll("div", {"class": "abstand"})
+            Draws.pop(0)
+            Draws.pop(0)
+            Draws.pop(0)
+            Draws.pop(0)
+
+            for j, Draw in enumerate(Draws):
+                thisisaDraw = Draw.text
+                if "Ziehungsreihenfolge" in thisisaDraw:
+                    print(str(Draw.prettify()))
+                    newLottoDrawMod = cLottoDrawModern.cLottoDrawModern(Draw)
+                    newLottoDrawMod.findDate()
+                    newLottoDrawMod.findWeekDay()
+                    newLottoDrawMod.findWinningNumbers()
+                    newLottoDrawMod.findPullDraw()
+                    newLottoDrawMod.findSuperNumber()
+
+                    allModLottoDraws.append(newLottoDrawMod)
 
         except:
-            print()
+            FileWrite = open(str(CPU) + " - #LottoDNF.txt", "a")
+            FileWrite.write(ModLottoDrawLink + "\n")
+            FileWrite.close()
 
 if __name__ == "__main__":
     startTime = time.time()
@@ -119,9 +165,17 @@ if __name__ == "__main__":
 
     numberOfCPUs = multiprocessing.cpu_count()
 
-    getOldDraws(1)
-    getMidDraws(1)
+    #getOldDraws(1)
+    #getMidDraws(1)
     getModDraws(1)
+
+    for OldLottoDraw in allOldLottoDraws:
+        OldLottoDraw.writeToCSVFile(1)
+        OldLottoDraw.writeToTABFile(1)
+
+    for MidLottoDraw in allMidLottoDraws:
+        MidLottoDraw.writeToCSVFile(1)
+        MidLottoDraw.writeToTABFile(1)
 
     '''
     manager = Manager()
